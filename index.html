@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuestra Boda</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&family=Great+Vibes&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#f0f4f8',
+                            100: '#d9e2ec',
+                            200: '#bccadc',
+                            500: '#334155',
+                            600: '#1e293b',
+                            700: '#0f172a',
+                            800: '#0a0f1d',
+                        },
+                        gold: {
+                            100: '#fbf4e8',
+                            300: '#e5cd98',
+                            400: '#d8b974',
+                            500: '#c5a059',
+                            600: '#a37e3d',
+                        },
+                        cream: '#fcfbf7',
+                    },
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'serif'],
+                        sans: ['Montserrat', 'sans-serif'],
+                        script: ['Great Vibes', 'cursive'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #fcfbf7;
+            color: #0f172a;
+            font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-script {
+            font-family: 'Great Vibes', cursive;
+        }
+
+        .font-serif {
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        /* Ambient subtle grain overlay */
+        .bg-grain {
+            background-image: radial-gradient(rgba(229, 205, 152, 0.15) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+
+        /* Envelope interactive styling */
+        .envelope-wrapper {
+            perspective: 1000px;
+        }
+
+        .envelope {
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .envelope-flap {
+            transform-origin: top center;
+            transition: transform 0.6s ease-in-out;
+            z-index: 20;
+        }
+
+        .open .envelope-flap {
+            transform: rotateX(180deg);
+            z-index: 5;
+        }
+
+        .letter-card {
+            transition: transform 0.8s ease-in-out, opacity 0.8s ease-in-out;
+        }
+
+        .open .letter-card {
+            transform: translateY(-80px) scale(1.05);
+        }
+
+        /* Custom glassmorphism cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(216, 185, 116, 0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        }
+
+        /* Scroll reveal animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Gold gradient text */
+        .text-gold-gradient {
+            background: linear-gradient(135deg, #c5a059 0%, #e5cd98 50%, #a37e3d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-cream bg-grain text-navy-700 antialiased selection:bg-gold-300 selection:text-navy-800">
+
+    <!-- Audio Floating Control -->
+    <button id="musicToggleBtn" onclick="toggleAudio()" class="fixed bottom-6 right-6 z-50 bg-navy-600 text-white p-3.5 rounded-full shadow-xl hover:bg-navy-700 transition-all duration-300 transform hover:scale-110 flex items-center justify-center group" aria-label="Control de Música">
+        <i id="musicIcon" class="fas fa-music text-lg group-hover:rotate-12 transition-transform"></i>
+        <span id="musicPulse" class="absolute -top-1 -right-1 flex h-3 w-3 hidden">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-gold-500"></span>
+        </span>
+    </button>
+
+    <!-- OVERLAY ENVELOPE (PANTALLA DE BIENVENIDA) -->
+    <div id="envelopeOverlay" class="fixed inset-0 z-50 bg-navy-800 flex flex-col items-center justify-center p-4 transition-opacity duration-1000">
+        <div class="text-center mb-8 text-cream px-4">
+            <p class="font-sans text-xs tracking-widest uppercase text-gold-300 mb-2">¡Tienes una invitación especial!</p>
+            <h2 class="font-serif text-3xl md:text-4xl">Maria & Marlon</h2>
+            <p class="font-sans text-xs text-cream/70 mt-1">Haz clic en el sello para abrir</p>
+        </div>
+
+        <div class="envelope-wrapper relative w-80 sm:w-96 h-56 cursor-pointer" onclick="openInvitation()">
+            <!-- Back flap/body -->
+            <div class="absolute inset-0 bg-navy-700 rounded-lg shadow-2xl border border-navy-600/50"></div>
+            
+            <!-- Letter Card inside -->
+            <div id="letterInside" class="letter-card absolute inset-x-4 top-2 bottom-2 bg-cream rounded-md p-6 shadow-inner flex flex-col items-center justify-center text-center border border-gold-300/40">
+                <i class="fas fa-heart text-gold-500 text-xl mb-2"></i>
+                <h3 class="font-script text-3xl text-navy-700">Nos Casamos</h3>
+                <p class="font-serif text-xs tracking-widest text-navy-600 mt-1 uppercase">30 de Mayo, 2027</p>
+            </div>
+
+            <!-- Envelope Flap -->
+            <div id="envelopeFlap" class="envelope-flap absolute top-0 inset-x-0 h-28 bg-navy-600 rounded-t-lg origin-top shadow-md border-b border-navy-500/30 flex items-center justify-center" style="clip-path: polygon(0 0, 100% 0, 50% 100%);">
+            </div>
+
+            <!-- Wax Seal Button -->
+            <div id="waxSeal" class="absolute top-20 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 transition-all duration-300 hover:scale-110">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 shadow-lg border-2 border-gold-300 flex items-center justify-center">
+                    <div class="w-12 h-12 rounded-full border border-gold-300/60 flex items-center justify-center text-cream">
+                        <i class="fas fa-ring text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN INVITATION CONTENT CONTAINER -->
+    <div id="mainContent" class="min-h-screen opacity-0 transition-opacity duration-1000">
+
+        <!-- HERO HEADER -->
+        <header class="relative min-h-screen flex flex-col items-center justify-center text-center px-4 py-16 overflow-hidden">
+            <!-- Decorative Floral SVGs (Top Corner) -->
+            <div class="absolute top-0 left-0 -translate-x-1/4 -translate-y-1/4 w-64 md:w-80 opacity-20 pointer-events-none">
+                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M100 0C110 50 150 90 200 100C150 110 110 150 100 200C90 150 50 110 0 100C50 90 90 50 100 0Z" fill="#1e293b"/>
+                </svg>
+            </div>
+
+            <div class="max-w-2xl mx-auto space-y-6 z-10">
+                <div class="inline-block border-b-2 border-gold-400 pb-2">
+                    <p class="font-sans text-xs tracking-[0.3em] uppercase text-navy-600 font-semibold">NUESTRA BODA</p>
+                </div>
+                
+                <h1 class="font-script text-6xl md:text-8xl text-gold-500 py-2">
+                    Maria <span class="font-serif text-3xl md:text-5xl text-navy-500 block md:inline my-2 md:my-0">&</span> Marlon
+                </h1>
+
+                <p class="font-serif text-xl md:text-2xl italic text-navy-700 font-light max-w-lg mx-auto">
+                    "El amor no contempla con los ojos, sino con el alma."
+                </p>
+
+                <div class="pt-6">
+                    <p class="font-serif text-2xl tracking-wide font-semibold text-navy-800">DOMINGO, 30 DE MAYO DE 2027</p>
+                    <p class="font-sans text-sm text-navy-600 tracking-widest uppercase mt-1">Hacienda Santa María • Bogotá, Colombia</p>
+                </div>
+
+                <div class="pt-8">
+                    <a href="#rsvp" class="inline-block bg-navy-600 hover:bg-navy-700 text-cream px-8 py-3.5 rounded-full shadow-lg transition-all transform hover:-translate-y-0.5 font-sans text-xs uppercase tracking-widest font-semibold">
+                        Confirmar Asistencia
+                    </a>
+                </div>
+            </div>
+
+            <!-- Scroll indicator -->
+            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce text-gold-500">
+                <i class="fas fa-chevron-down text-xl"></i>
+            </div>
+        </header>
+
+        <!-- COUNTDOWN TIMER SECTION -->
+        <section class="py-16 bg-navy-50 border-y border-gold-300/30">
+            <div class="max-w-4xl mx-auto px-4 text-center">
+                <h2 class="font-serif text-2xl md:text-3xl text-navy-800 mb-8 tracking-wider">CUENTA REGRESIVA</h2>
+                
+                <div class="grid grid-cols-4 gap-3 sm:gap-6 max-w-lg mx-auto">
+                    <div class="glass-card p-4 rounded-xl shadow-sm border border-gold-300/40">
+                        <span id="days" class="block font-serif text-3xl md:text-5xl font-bold text-gold-600">00</span>
+                        <span class="font-sans text-[10px] sm:text-xs tracking-widest uppercase text-navy-600 mt-1 block">Días</span>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl shadow-sm border border-gold-300/40">
+                        <span id="hours" class="block font-serif text-3xl md:text-5xl font-bold text-gold-600">00</span>
+                        <span class="font-sans text-[10px] sm:text-xs tracking-widest uppercase text-navy-600 mt-1 block">Horas</span>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl shadow-sm border border-gold-300/40">
+                        <span id="minutes" class="block font-serif text-3xl md:text-5xl font-bold text-gold-600">00</span>
+                        <span class="font-sans text-[10px] sm:text-xs tracking-widest uppercase text-navy-600 mt-1 block">Min</span>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl shadow-sm border border-gold-300/40">
+                        <span id="seconds" class="block font-serif text-3xl md:text-5xl font-bold text-gold-600">00</span>
+                        <span class="font-sans text-[10px] sm:text-xs tracking-widest uppercase text-navy-600 mt-1 block">Seg</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- EVENT DETAILS & LOCATION -->
+        <section class="py-20 px-4 max-w-5xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <p class="font-sans text-xs tracking-widest text-gold-600 uppercase font-semibold">¿DÓNDE Y CUÁNDO?</p>
+                <h2 class="font-serif text-4xl text-navy-800 mt-2">Detalles del Evento</h2>
+                <div class="w-16 h-0.5 bg-gold-400 mx-auto mt-4"></div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Ceremonia Card -->
+                <div class="glass-card p-8 rounded-2xl text-center border-t-4 border-t-gold-400 reveal hover:shadow-xl transition-shadow">
+                    <div class="w-16 h-16 mx-auto mb-6 bg-gold-100 rounded-full flex items-center justify-center text-gold-600 text-2xl">
+                        <i class="fas fa-church"></i>
+                    </div>
+                    <h3 class="font-serif text-2xl text-navy-800 font-semibold mb-2">Ceremonia Religiosa</h3>
+                    <p class="font-sans text-sm text-gold-600 font-medium mb-4"><i class="far fa-clock mr-1"></i> 4:00 PM</p>
+                    <p class="font-serif text-lg text-navy-700 font-semibold">Capilla de San José</p>
+                    <p class="font-sans text-xs text-navy-600 mt-1 mb-6">Km 14 Cota - Suba, Bogotá</p>
+                    
+                    <a href="https://maps.google.com/?q=Capilla+San+Jose" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-full bg-cream border border-gold-400 text-gold-600 hover:bg-gold-500 hover:text-white py-2.5 px-4 rounded-xl text-xs uppercase tracking-widest font-semibold transition-colors">
+                        <i class="fas fa-map-marker-alt mr-2"></i> Ver en Google Maps
+                    </a>
+                </div>
+
+                <!-- Recepcion Card -->
+                <div class="glass-card p-8 rounded-2xl text-center border-t-4 border-t-navy-500 reveal hover:shadow-xl transition-shadow">
+                    <div class="w-16 h-16 mx-auto mb-6 bg-navy-100 rounded-full flex items-center justify-center text-navy-600 text-2xl">
+                        <i class="fas fa-glass-cheers"></i>
+                    </div>
+                    <h3 class="font-serif text-2xl text-navy-800 font-semibold mb-2">Recepción & Fiesta</h3>
+                    <p class="font-sans text-sm text-gold-600 font-medium mb-4"><i class="far fa-clock mr-1"></i> 6:30 PM</p>
+                    <p class="font-serif text-lg text-navy-700 font-semibold">Gran Salón Hacienda Santa María</p>
+                    <p class="font-sans text-xs text-navy-600 mt-1 mb-6">Km 14 Cota - Suba, Bogotá</p>
+                    
+                    <a href="https://maps.google.com/?q=Hacienda+Santa+Maria" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-full bg-cream border border-navy-500 text-navy-600 hover:bg-navy-600 hover:text-white py-2.5 px-4 rounded-xl text-xs uppercase tracking-widest font-semibold transition-colors">
+                        <i class="fas fa-map-marked-alt mr-2"></i> Ver Ubicación Recepción
+                    </a>
+                </div>
+            </div>
+
+            <!-- Calendar CTA -->
+            <div class="mt-12 text-center reveal">
+                <button onclick="downloadICS()" class="inline-flex items-center bg-gold-500 hover:bg-gold-600 text-cream px-6 py-3 rounded-full shadow-md transition-colors text-xs uppercase tracking-widest font-semibold">
+                    <i class="far fa-calendar-plus mr-2 text-base"></i> Agregar a mi Calendario
+                </button>
+            </div>
+        </section>
+
+        <!-- DRESS CODE SECTION -->
+        <section class="py-16 bg-navy-800 text-cream px-4">
+            <div class="max-w-3xl mx-auto text-center reveal">
+                <i class="fas fa-user-tie text-gold-400 text-3xl mb-4"></i>
+                <p class="font-sans text-xs tracking-widest uppercase text-gold-300">CÓDIGO DE VESTIMENTA</p>
+                <h2 class="font-serif text-3xl md:text-4xl text-cream mt-1 mb-4">Formal / Etiqueta Rigurosa</h2>
+                <p class="font-sans text-sm text-cream/80 max-w-md mx-auto mb-8">
+                    Queremos que lucir deslumbrante sea parte de nuestro gran día. Traje oscuro para ellos y vestido largo para ellas.
+                </p>
+
+                <!-- Color Palette Suggestions -->
+                <div class="pt-4">
+                    <p class="font-sans text-xs uppercase tracking-widest text-gold-300 mb-3">Paleta de tonos sugerida</p>
+                    <div class="flex justify-center items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-[#0f172a] border border-gold-400 shadow-md" title="Azul Noche"></div>
+                        <div class="w-8 h-8 rounded-full bg-[#1e293b] border border-gold-400 shadow-md" title="Azul Marino"></div>
+                        <div class="w-8 h-8 rounded-full bg-[#c5a059] border border-gold-400 shadow-md" title="Dorado / Champagne"></div>
+                        <div class="w-8 h-8 rounded-full bg-[#f8fafc] border border-gold-400 shadow-md" title="Perla"></div>
+                    </div>
+                    <p class="font-sans text-[11px] text-cream/60 italic mt-4">* Rogamos reservar el color blanco exclusivo para la novia.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHOTO GALLERY -->
+        <section class="py-20 px-4 max-w-5xl mx-auto">
+            <div class="text-center mb-12 reveal">
+                <p class="font-sans text-xs tracking-widest text-gold-600 uppercase font-semibold">NUESTRA HISTORIA</p>
+                <h2 class="font-serif text-4xl text-navy-800 mt-2">Momentos Especiales</h2>
+                <div class="w-16 h-0.5 bg-gold-400 mx-auto mt-4"></div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="overflow-hidden rounded-xl shadow-md group reveal">
+                    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80" alt="Pareja 1" class="w-full h-64 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                </div>
+                <div class="overflow-hidden rounded-xl shadow-md group reveal">
+                    <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=600&q=80" alt="Pareja 2" class="w-full h-64 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                </div>
+                <div class="overflow-hidden rounded-xl shadow-md group reveal">
+                    <img src="https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=600&q=80" alt="Pareja 3" class="w-full h-64 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                </div>
+            </div>
+        </section>
+
+        <!-- GIFTS / LLUVIA DE SOBRES -->
+        <section class="py-16 bg-gold-100/50 border-y border-gold-300/30 px-4">
+            <div class="max-w-2xl mx-auto text-center reveal">
+                <i class="fas fa-gift text-gold-600 text-3xl mb-4"></i>
+                <h2 class="font-serif text-3xl text-navy-800">Mesa de Regalos</h2>
+                <p class="font-sans text-sm text-navy-700 my-4 leading-relaxed">
+                    Su presencia es nuestro mejor regalo. Si desean realizarnos un obsequio adicional, les sugerimos la modalidad de <strong class="text-navy-800">Lluvia de Sobres</strong> o transferencia bancaria:
+                </p>
+
+                <div class="bg-cream p-6 rounded-2xl shadow-sm border border-gold-300/50 max-w-md mx-auto space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-navy-50 rounded-lg">
+                        <div class="text-left">
+                            <p class="font-sans text-xs text-navy-600 font-semibold uppercase">Cuenta Ahorros Bancolombia</p>
+                            <p class="font-mono text-sm text-navy-800 font-bold">123-456789-01</p>
+                            <p class="font-sans text-[10px] text-navy-500">A nombre de: Maria Gomez</p>
+                        </div>
+                        <button onclick="copyToClipboard('123-456789-01', 'Bancolombia')" class="bg-gold-500 hover:bg-gold-600 text-white text-xs px-3 py-1.5 rounded-md transition-colors">
+                            Copiar
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-navy-50 rounded-lg">
+                        <div class="text-left">
+                            <p class="font-sans text-xs text-navy-600 font-semibold uppercase">Nequi / Daviplata</p>
+                            <p class="font-mono text-sm text-navy-800 font-bold">300 123 4567</p>
+                            <p class="font-sans text-[10px] text-navy-500">A nombre de: Marlon Perez</p>
+                        </div>
+                        <button onclick="copyToClipboard('3001234567', 'Nequi')" class="bg-gold-500 hover:bg-gold-600 text-white text-xs px-3 py-1.5 rounded-md transition-colors">
+                            Copiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RSVP FORM SECTION -->
+        <section id="rsvp" class="py-20 px-4 max-w-3xl mx-auto">
+            <div class="glass-card p-8 md:p-12 rounded-3xl shadow-xl border border-gold-300/50 reveal">
+                <div class="text-center mb-8">
+                    <p class="font-sans text-xs tracking-widest text-gold-600 uppercase font-semibold">CONFIRMACIÓN</p>
+                    <h2 class="font-serif text-4xl text-navy-800 mt-1">¿Nos Acompañas?</h2>
+                    <p class="font-sans text-xs text-navy-600 mt-2">Por favor confirma tu asistencia antes del 1 de Mayo de 2027</p>
+                </div>
+
+                <form id="rsvpForm" onsubmit="submitRSVP(event)" class="space-y-6">
+                    <div>
+                        <label class="block font-sans text-xs uppercase tracking-wider text-navy-700 font-semibold mb-2">Nombre Completo *</label>
+                        <input type="text" required placeholder="Ej. Juan Pérez" class="w-full px-4 py-3 rounded-xl border border-gold-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400 bg-cream text-sm">
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block font-sans text-xs uppercase tracking-wider text-navy-700 font-semibold mb-2">¿Asistirás? *</label>
+                            <select required class="w-full px-4 py-3 rounded-xl border border-gold-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400 bg-cream text-sm">
+                                <option value="si">¡Sí, con mucho gusto asistiré!</option>
+                                <option value="no">Lo siento, no podré asistir</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-sans text-xs uppercase tracking-wider text-navy-700 font-semibold mb-2">Número de Acompañantes</label>
+                            <select class="w-full px-4 py-3 rounded-xl border border-gold-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400 bg-cream text-sm">
+                                <option value="0">Solo yo</option>
+                                <option value="1">+1 Acompañante</option>
+                                <option value="2">+2 Acompañantes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-sans text-xs uppercase tracking-wider text-navy-700 font-semibold mb-2">Restricciones Alimentarias</label>
+                        <select class="w-full px-4 py-3 rounded-xl border border-gold-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400 bg-cream text-sm">
+                            <option value="ninguna">Ninguna</option>
+                            <option value="vegetariano">Vegetariano</option>
+                            <option value="vegano">Vegano</option>
+                            <option value="alergias">Alergias o Intolerancias</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-sans text-xs uppercase tracking-wider text-navy-700 font-semibold mb-2">Mensaje para los Novios</label>
+                        <textarea rows="3" placeholder="Escribe un lindo mensaje para nosotros..." class="w-full px-4 py-3 rounded-xl border border-gold-300/60 focus:outline-none focus:ring-2 focus:ring-gold-400 bg-cream text-sm"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-navy-600 hover:bg-navy-700 text-cream py-4 rounded-xl shadow-lg font-sans text-xs uppercase tracking-widest font-semibold transition-colors duration-300">
+                        Enviar Confirmación
+                    </button>
+                </form>
+
+                <div id="rsvpSuccess" class="hidden text-center py-8 space-y-4">
+                    <div class="w-16 h-16 bg-navy-100 text-navy-600 rounded-full flex items-center justify-center mx-auto text-3xl">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 class="font-serif text-3xl text-navy-800">¡Gracias por Confirmar!</h3>
+                    <p class="font-sans text-sm text-navy-600">Estamos muy felices de contar contigo en este día tan especial.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="py-12 bg-navy-800 text-cream text-center border-t border-gold-500/20">
+            <h2 class="font-script text-4xl text-gold-400 mb-2">Maria & Marlon</h2>
+            <p class="font-serif text-sm text-cream/70 tracking-widest uppercase">Te esperamos con mucho amor</p>
+            <p class="font-sans text-[10px] text-cream/40 mt-8">Boda Maria & Marlon © 2027</p>
+        </footer>
+
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-5 right-5 z-50 bg-navy-700 text-cream px-5 py-3 rounded-xl shadow-xl transition-all duration-300 transform translate-y-[-100px] opacity-0 text-xs font-sans flex items-center">
+        <i class="fas fa-info-circle mr-2 text-gold-400"></i>
+        <span id="toastMsg">Notificación</span>
+    </div>
+
+    <script>
+        /* Interactive Envelope logic */
+        function openInvitation() {
+            const envelopeWrapper = document.querySelector('.envelope-wrapper');
+            const overlay = document.getElementById('envelopeOverlay');
+            const mainContent = document.getElementById('mainContent');
+
+            envelopeWrapper.classList.add('open');
+
+            // Play background gentle music
+            initAudio();
+
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    mainContent.style.opacity = '1';
+                    // Trigger initial scroll reveal check
+                    handleScrollReveal();
+                }, 800);
+            }, 1000);
+        }
+
+        /* Ambient Web Audio Synthesizer (Gentle romantic piano chords) */
+        let audioCtx = null;
+        let isPlaying = false;
+        let synthInterval = null;
+
+        function initAudio() {
+            if (audioCtx) {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                isPlaying = true;
+                updateAudioUI();
+                return;
+            }
+
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                isPlaying = true;
+                updateAudioUI();
+
+                // Gentle melody notes (frequencies in Hz)
+                const chords = [
+                    [261.63, 329.63, 392.00, 523.25], // C Major
+                    [220.00, 261.63, 329.63, 440.00], // A Minor
+                    [174.61, 220.00, 261.63, 349.23], // F Major
+                    [196.00, 246.94, 293.66, 392.00]  // G Major
+                ];
+
+                let chordIdx = 0;
+
+                function playChord() {
+                    if (!isPlaying || !audioCtx) return;
+
+                    const chord = chords[chordIdx];
+                    chordIdx = (chordIdx + 1) % chords.length;
+
+                    chord.forEach((freq, index) => {
+                        setTimeout(() => {
+                            if (!isPlaying) return;
+                            const osc = audioCtx.createOscillator();
+                            const gain = audioCtx.createGain();
+
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                            // Envelope for soft piano/bell tone
+                            gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                            gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.1);
+                            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 3.5);
+
+                            osc.connect(gain);
+                            gain.connect(audioCtx.destination);
+
+                            osc.start();
+                            osc.stop(audioCtx.currentTime + 3.6);
+                        }, index * 250);
+                    });
+                }
+
+                playChord();
+                synthInterval = setInterval(playChord, 3500);
+
+            } catch (e) {
+                console.log("Web Audio API not supported", e);
+            }
+        }
+
+        function toggleAudio() {
+            if (!audioCtx) {
+                initAudio();
+                return;
+            }
+
+            if (isPlaying) {
+                audioCtx.suspend();
+                isPlaying = false;
+            } else {
+                audioCtx.resume();
+                isPlaying = true;
+            }
+            updateAudioUI();
+        }
+
+        function updateAudioUI() {
+            const icon = document.getElementById('musicIcon');
+            const pulse = document.getElementById('musicPulse');
+            if (isPlaying) {
+                icon.className = "fas fa-music text-lg text-gold-300";
+                pulse.classList.remove('hidden');
+            } else {
+                icon.className = "fas fa-volume-mute text-lg text-cream/60";
+                pulse.classList.add('hidden');
+            }
+        }
+
+        /* Countdown Timer Logic - Boda 30 de Mayo de 2027 */
+        const weddingDate = new Date('May 30, 2027 16:00:00').getTime();
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = weddingDate - now;
+
+            if (distance < 0) {
+                document.getElementById('days').innerText = "00";
+                document.getElementById('hours').innerText = "00";
+                document.getElementById('minutes').innerText = "00";
+                document.getElementById('seconds').innerText = "00";
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('days').innerText = days < 10 ? '0' + days : days;
+            document.getElementById('hours').innerText = hours < 10 ? '0' + hours : hours;
+            document.getElementById('minutes').innerText = minutes < 10 ? '0' + minutes : minutes;
+            document.getElementById('seconds').innerText = seconds < 10 ? '0' + seconds : seconds;
+        }
+
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        /* Clipboard Copy Helper */
+        function copyToClipboard(text, name) {
+            const tempInput = document.createElement('input');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast(`Número de ${name} copiado al portapapeles`);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = message;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+
+            setTimeout(() => {
+                toast.style.transform = 'translateY(-100px)';
+                toast.style.opacity = '0';
+            }, 3000);
+        }
+
+        /* RSVP Submission logic with confetti */
+        function submitRSVP(event) {
+            event.preventDefault();
+            document.getElementById('rsvpForm').classList.add('hidden');
+            document.getElementById('rsvpSuccess').classList.remove('hidden');
+
+            // Fire confetti animation
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#c5a059', '#1e293b', '#e5cd98']
+                });
+            }
+        }
+
+        /* Download .ics Calendar File */
+        function downloadICS() {
+            const icsData = 
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Boda Maria y Marlon//NONSGML v1.0//ES
+BEGIN:VEVENT
+SUMMARY:Boda Maria & Marlon
+DESCRIPTION:¡Acompáñanos a celebrar nuestra boda!
+LOCATION:Hacienda Santa María, Cota - Suba, Bogotá
+DTSTART:20270530T210000Z
+DTEND:20270531T080000Z
+END:VEVENT
+END:VCALENDAR`;
+
+            const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Boda_Maria_y_Marlon.ics';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        /* Scroll Reveal Effect */
+        function handleScrollReveal() {
+            const reveals = document.querySelectorAll('.reveal');
+            reveals.forEach(element => {
+                const windowHeight = window.innerHeight;
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 100;
+
+                if (elementTop < windowHeight - elementVisible) {
+                    element.classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', handleScrollReveal);
+    </script>
+</body>
+</html>
